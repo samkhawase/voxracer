@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
 from . import __version__
+from .adapters.elevenlabs import ElevenLabsAdapter
+from .adapters.protocol import AdapterError
 from .analysis import analyze_session
 from .model import Session
 from .schema import validate_session
@@ -24,6 +27,13 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("session", type=Path)
     analyze = subparsers.add_parser("analyze", help="analyze a session JSON file")
     analyze.add_argument("session", type=Path)
+    latest = subparsers.add_parser("latest", help="fetch and analyze the latest provider call")
+    latest.add_argument("--provider", choices=("elevenlabs",), default="elevenlabs")
+    latest.add_argument(
+        "--api-key-env",
+        default="ELEVENLABS_API_KEY",
+        help="environment variable containing the provider API key",
+    )
     return parser
 
 
@@ -41,13 +51,24 @@ def _load(path: Path) -> Session:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        session = _load(args.session)
+        if args.command in ("validate", "analyze"):
+            session = _load(args.session)
+        else:
+            credential = os.environ.get(args.api_key_env)
+            if not credential:
+                raise ValueError(f"environment variable {args.api_key_env} is not set")
+            adapter = ElevenLabsAdapter()
+            call_ids = adapter.list_call_ids(credential, limit=1)
+            if not call_ids:
+                raise ValueError("provider returned no calls")
+            session = adapter.fetch_session(credential, call_ids[0])
+
         if args.command == "validate":
             print(f"valid session: {session.session_id}")
         else:
             print(json.dumps(analyze_session(session).to_dict(), indent=2))
         return 0
-    except ValueError as exc:
+    except (AdapterError, ValueError) as exc:
         print(f"voxracer: {exc}", file=sys.stderr)
         return 2
 

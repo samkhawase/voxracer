@@ -44,6 +44,18 @@ Type checking uses strict mypy settings:
 uv run mypy src
 ```
 
+To fetch and analyze the newest available call, set the provider key in the
+environment and run:
+
+```bash
+export ELEVENLABS_API_KEY=...
+voxracer latest
+```
+
+The command returns canonical JSON. Unknown values remain `null`. Provider
+records can change after a call, and provider timing does not replace audio
+measurement.
+
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).

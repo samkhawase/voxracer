@@ -76,6 +76,34 @@ def test_cli_help_and_validation(tmp_path, capsys):
     assert "valid session" in capsys.readouterr().out
 
 
+def test_cli_latest_requires_api_key(monkeypatch, capsys):
+    monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+
+    assert main(["latest"]) == 2
+    assert "ELEVENLABS_API_KEY is not set" in capsys.readouterr().err
+
+
+def test_cli_latest_fetches_and_analyzes_newest_call(monkeypatch, capsys):
+    class FakeLatestAdapter:
+        def list_call_ids(self, credential, *, limit=30):
+            assert credential == "redacted-key"
+            assert limit == 1
+            return [CallId("call-1")]
+
+        def fetch_session(self, credential, call_id):
+            assert credential == "redacted-key"
+            assert call_id == CallId("call-1")
+            return make_session()
+
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "redacted-key")
+    monkeypatch.setattr("voxracer.cli.ElevenLabsAdapter", FakeLatestAdapter)
+
+    assert main(["latest"]) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["session_id"] == "session-1"
+    assert output["turns"][0]["metrics"]["ttfab_ms"] == 1000.0
+
+
 def test_provider_adapter_protocol_accepts_read_only_adapter():
     class FakeAdapter:
         name = "fake"
