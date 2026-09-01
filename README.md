@@ -60,6 +60,9 @@ To fetch one known call instead of the newest call, run:
 voxracer fetch --provider vapi --call CALL_ID
 ```
 
+This prints a human-readable report. Use `--format json` for machine-readable
+output.
+
 The command returns canonical JSON. Unknown values remain `null`. Provider
 records can change after a call, and provider timing does not replace audio
 measurement.

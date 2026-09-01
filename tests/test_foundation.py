@@ -101,6 +101,18 @@ def test_cli_fetches_explicit_call(monkeypatch, capsys):
     monkeypatch.setattr("voxracer.cli.VapiAdapter", FakeAdapter)
 
     assert main(["fetch", "--provider", "vapi", "--call", "call-explicit"]) == 0
+    assert "session: session-1" in capsys.readouterr().out
+
+
+def test_cli_fetch_can_return_json(monkeypatch, capsys):
+    class FakeAdapter:
+        def fetch_session(self, credential, call_id):
+            return make_session()
+
+    monkeypatch.setenv("VAPI_API_KEY", "redacted-key")
+    monkeypatch.setattr("voxracer.cli.VapiAdapter", FakeAdapter)
+
+    assert main(["fetch", "--provider", "vapi", "--call", "call-explicit", "--format", "json"]) == 0
     assert json.loads(capsys.readouterr().out)["session_id"] == "session-1"
 
 

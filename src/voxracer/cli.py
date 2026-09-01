@@ -48,6 +48,8 @@ def _parser() -> argparse.ArgumentParser:
         default=None,
         help="environment variable containing the provider API key",
     )
+    fetch.add_argument("--format", choices=("report", "json"), default="report")
+    latest.add_argument("--format", choices=("report", "json"), default="json")
     return parser
 
 
@@ -70,6 +72,11 @@ def _report(session: Session) -> str:
             value = turn.metrics[key]
             display = "unknown" if value is None else f"{value:.3f} ms"
             lines.append(f"  {key}: {display}")
+    findings = diagnose_session(session)
+    if findings:
+        lines.append("findings:")
+        for finding in findings:
+            lines.append(f"  {finding.turn_id}: {finding.message}")
     return "\n".join(lines)
 
 
@@ -107,6 +114,8 @@ def main(argv: list[str] | None = None) -> int:
             print(_report(analyze_session(session)))
         elif args.command == "diagnose":
             print(json.dumps([finding.to_dict() for finding in diagnose_session(analyze_session(session))], indent=2))
+        elif args.command in ("latest", "fetch") and args.format == "report":
+            print(_report(analyze_session(session)))
         else:
             print(json.dumps(analyze_session(session).to_dict(), indent=2))
         return 0
