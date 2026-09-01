@@ -40,6 +40,14 @@ def _parser() -> argparse.ArgumentParser:
         default=None,
         help="environment variable containing the provider API key",
     )
+    fetch = subparsers.add_parser("fetch", help="fetch and analyze one provider call")
+    fetch.add_argument("--provider", choices=("elevenlabs", "vapi"), required=True)
+    fetch.add_argument("--call", required=True, help="provider call identifier")
+    fetch.add_argument(
+        "--api-key-env",
+        default=None,
+        help="environment variable containing the provider API key",
+    )
     return parser
 
 
@@ -65,23 +73,33 @@ def _report(session: Session) -> str:
     return "\n".join(lines)
 
 
+def _adapter(provider: str) -> ElevenLabsAdapter | VapiAdapter:
+    return ElevenLabsAdapter() if provider == "elevenlabs" else VapiAdapter()
+
+
+def _key_env(provider: str, override: str | None) -> str:
+    return override or ("ELEVENLABS_API_KEY" if provider == "elevenlabs" else "VAPI_API_KEY")
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         if args.command in ("validate", "analyze", "report", "diagnose"):
             session = _load(args.session)
         else:
-            key_env = args.api_key_env or (
-                "ELEVENLABS_API_KEY" if args.provider == "elevenlabs" else "VAPI_API_KEY"
-            )
+            key_env = _key_env(args.provider, args.api_key_env)
             credential = os.environ.get(key_env)
             if not credential:
                 raise ValueError(f"environment variable {key_env} is not set")
-            adapter = ElevenLabsAdapter() if args.provider == "elevenlabs" else VapiAdapter()
-            call_ids = adapter.list_call_ids(credential, limit=1)
-            if not call_ids:
-                raise ValueError("provider returned no calls")
-            session = adapter.fetch_session(credential, call_ids[0])
+            adapter = _adapter(args.provider)
+            if args.command == "latest":
+                call_ids = adapter.list_call_ids(credential, limit=1)
+                if not call_ids:
+                    raise ValueError("provider returned no calls")
+                call_id = call_ids[0]
+            else:
+                call_id = args.call
+            session = adapter.fetch_session(credential, call_id)
 
         if args.command == "validate":
             print(f"valid session: {session.session_id}")

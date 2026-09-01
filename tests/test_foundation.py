@@ -90,6 +90,20 @@ def test_cli_vapi_uses_vapi_key_by_default(monkeypatch, capsys):
     assert "VAPI_API_KEY is not set" in capsys.readouterr().err
 
 
+def test_cli_fetches_explicit_call(monkeypatch, capsys):
+    class FakeAdapter:
+        def fetch_session(self, credential, call_id):
+            assert credential == "redacted-key"
+            assert call_id == "call-explicit"
+            return make_session()
+
+    monkeypatch.setenv("VAPI_API_KEY", "redacted-key")
+    monkeypatch.setattr("voxracer.cli.VapiAdapter", FakeAdapter)
+
+    assert main(["fetch", "--provider", "vapi", "--call", "call-explicit"]) == 0
+    assert json.loads(capsys.readouterr().out)["session_id"] == "session-1"
+
+
 def test_cli_latest_fetches_and_analyzes_newest_call(monkeypatch, capsys):
     class FakeLatestAdapter:
         def list_call_ids(self, credential, *, limit=30):

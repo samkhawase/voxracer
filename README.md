@@ -54,6 +54,12 @@ voxracer latest
 
 Use `--provider vapi` with `VAPI_API_KEY` for Vapi calls.
 
+To fetch one known call instead of the newest call, run:
+
+```bash
+voxracer fetch --provider vapi --call CALL_ID
+```
+
 The command returns canonical JSON. Unknown values remain `null`. Provider
 records can change after a call, and provider timing does not replace audio
 measurement.
