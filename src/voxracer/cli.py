@@ -76,6 +76,8 @@ def _report(session: Session) -> str:
 
     def bar(fraction: float, width: int) -> str:
         filled = max(0, min(width, round(fraction * width)))
+        if fraction > 0 and filled == 0:
+            filled = 1
         return "█" * filled
 
     measured = [turn.metrics["ttfab_ms"] for turn in session.turns if turn.metrics["ttfab_ms"] is not None]

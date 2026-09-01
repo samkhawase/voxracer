@@ -169,6 +169,17 @@ def test_cli_report_aligns_metric_bars(tmp_path, capsys):
     assert len(set(bar_starts)) == 1
 
 
+def test_cli_report_shows_bar_for_small_positive_playback(tmp_path, capsys):
+    session = make_session()
+    session.turns[0].metrics["playback_ms"] = 1.0
+    path = tmp_path / "session.json"
+    path.write_text(json.dumps(session.to_dict()), encoding="utf-8")
+
+    assert main(["report", str(path)]) == 0
+    playback = next(line for line in capsys.readouterr().out.splitlines() if "playback" in line)
+    assert "█" in playback
+
+
 def test_diagnosis_reports_evidence_without_inventing_a_cause():
     findings = diagnose_session(analyze_session(make_session()))
 
