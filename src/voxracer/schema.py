@@ -63,6 +63,8 @@ def validate_session(data: Any) -> list[str]:
         ):
             if key in turn and turn[key] is not None and turn[key] not in allowed:
                 errors.append(f"{where}.{key} is not supported")
+        if "attributes" in turn and not isinstance(turn["attributes"], dict):
+            errors.append(f"{where}.attributes must be an object")
         spans = turn.get("spans")
         if not isinstance(spans, list):
             errors.append(f"{where}.spans must be a list")

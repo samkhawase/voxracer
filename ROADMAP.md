@@ -16,18 +16,22 @@ Status: complete.
 
 ## 2. First provider
 
-Status: next.
+Status: complete.
 
 - Add the ElevenLabs client.
 - Read only the fields needed for timing.
 - Filter provider data at parse time.
 - Map the result to the canonical model.
 - Test with redacted fixtures.
+- Read transcript timing for speech-to-text and endpointing.
+- Keep provider time to first audio separate from caller-perceived time.
 
 Stop if the provider gives a duration but no reliable position. Do not invent a
 position.
 
 ## 3. Useful alpha
+
+Status: next.
 
 - Add a simple command for the latest call.
 - Show measured, unknown, and not-applicable values.

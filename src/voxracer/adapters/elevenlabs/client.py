@@ -57,3 +57,7 @@ class ElevenLabsClient:
             f"/v1/convai/conversations/{encoded_id}",
             "?format=opentelemetry",
         )
+
+    def fetch_transcript(self, conversation_id: str) -> dict[str, Any]:
+        encoded_id = urllib.parse.quote(conversation_id, safe="")
+        return self._get_json(f"/v1/convai/conversations/{encoded_id}")

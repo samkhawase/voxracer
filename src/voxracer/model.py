@@ -100,6 +100,7 @@ class Turn:
     measurement_source: MeasurementSource | None = None
     measurement_scope: MeasurementScope | None = None
     measurement_quality: MeasurementQuality | None = None
+    attributes: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.metrics = _metric_dict(self.metrics)
@@ -117,6 +118,7 @@ class Turn:
             "measurement_source": self.measurement_source,
             "measurement_scope": self.measurement_scope,
             "measurement_quality": self.measurement_quality,
+            "attributes": dict(self.attributes),
         }
 
     @classmethod
