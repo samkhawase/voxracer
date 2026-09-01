@@ -10,8 +10,10 @@ from pathlib import Path
 
 from . import __version__
 from .adapters.elevenlabs import ElevenLabsAdapter
+from .adapters.vapi import VapiAdapter
 from .adapters.protocol import AdapterError
 from .analysis import analyze_session
+from .diagnosis import diagnose_session
 from .model import METRIC_KEYS, Session
 from .schema import validate_session
 
@@ -29,11 +31,13 @@ def _parser() -> argparse.ArgumentParser:
     analyze.add_argument("session", type=Path)
     report = subparsers.add_parser("report", help="print a human-readable session report")
     report.add_argument("session", type=Path)
+    diagnose = subparsers.add_parser("diagnose", help="show deterministic session findings")
+    diagnose.add_argument("session", type=Path)
     latest = subparsers.add_parser("latest", help="fetch and analyze the latest provider call")
-    latest.add_argument("--provider", choices=("elevenlabs",), default="elevenlabs")
+    latest.add_argument("--provider", choices=("elevenlabs", "vapi"), default="elevenlabs")
     latest.add_argument(
         "--api-key-env",
-        default="ELEVENLABS_API_KEY",
+        default=None,
         help="environment variable containing the provider API key",
     )
     return parser
@@ -64,13 +68,16 @@ def _report(session: Session) -> str:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        if args.command in ("validate", "analyze", "report"):
+        if args.command in ("validate", "analyze", "report", "diagnose"):
             session = _load(args.session)
         else:
-            credential = os.environ.get(args.api_key_env)
+            key_env = args.api_key_env or (
+                "ELEVENLABS_API_KEY" if args.provider == "elevenlabs" else "VAPI_API_KEY"
+            )
+            credential = os.environ.get(key_env)
             if not credential:
-                raise ValueError(f"environment variable {args.api_key_env} is not set")
-            adapter = ElevenLabsAdapter()
+                raise ValueError(f"environment variable {key_env} is not set")
+            adapter = ElevenLabsAdapter() if args.provider == "elevenlabs" else VapiAdapter()
             call_ids = adapter.list_call_ids(credential, limit=1)
             if not call_ids:
                 raise ValueError("provider returned no calls")
@@ -80,6 +87,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"valid session: {session.session_id}")
         elif args.command == "report":
             print(_report(analyze_session(session)))
+        elif args.command == "diagnose":
+            print(json.dumps([finding.to_dict() for finding in diagnose_session(analyze_session(session))], indent=2))
         else:
             print(json.dumps(analyze_session(session).to_dict(), indent=2))
         return 0

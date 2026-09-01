@@ -31,7 +31,7 @@ position.
 
 ## 3. Useful alpha
 
-Status: in progress.
+Status: complete for local workflows.
 
 - Add a simple command for the latest call.
 - Show measured, unknown, and not-applicable values.
@@ -41,12 +41,16 @@ Status: in progress.
 
 ## 4. Second provider
 
+Status: complete.
+
 - Add Vapi after the first provider works.
 - Keep provider rules inside the adapter.
 - Test different stage boundaries.
 - Test URL validation and secret redaction.
 
 ## 5. Diagnosis
+
+Status: complete.
 
 - Add deterministic findings after measurement works across providers.
 - Show the evidence for every finding.

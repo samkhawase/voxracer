@@ -52,6 +52,8 @@ export ELEVENLABS_API_KEY=...
 voxracer latest
 ```
 
+Use `--provider vapi` with `VAPI_API_KEY` for Vapi calls.
+
 The command returns canonical JSON. Unknown values remain `null`. Provider
 records can change after a call, and provider timing does not replace audio
 measurement.
@@ -68,6 +70,15 @@ use a separate not-applicable value.
 The provider adapter reads call identifiers, OTLP timing, and transcript timing
 only. It does not provide handset, carrier, or playback measurements. These
 values remain unknown until another measurement source is available.
+
+For deterministic findings from a local session, run:
+
+```bash
+voxracer diagnose session.json
+```
+
+The command reports unknown caller timing and high unattributed time. It does
+not assign a cause.
 
 ## License
 

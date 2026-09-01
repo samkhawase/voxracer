@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from voxracer import Session, Span, Turn, analyze_session, validate_session
+from voxracer import Session, Span, Turn, analyze_session, diagnose_session, validate_session
 from voxracer.adapters import ProviderAdapter
 from voxracer.adapters.protocol import CallId
 from voxracer.cli import main
@@ -83,6 +83,13 @@ def test_cli_latest_requires_api_key(monkeypatch, capsys):
     assert "ELEVENLABS_API_KEY is not set" in capsys.readouterr().err
 
 
+def test_cli_vapi_uses_vapi_key_by_default(monkeypatch, capsys):
+    monkeypatch.delenv("VAPI_API_KEY", raising=False)
+
+    assert main(["latest", "--provider", "vapi"]) == 2
+    assert "VAPI_API_KEY is not set" in capsys.readouterr().err
+
+
 def test_cli_latest_fetches_and_analyzes_newest_call(monkeypatch, capsys):
     class FakeLatestAdapter:
         def list_call_ids(self, credential, *, limit=30):
@@ -112,6 +119,22 @@ def test_cli_report_shows_measured_and_unknown_values(tmp_path, capsys):
     output = capsys.readouterr().out
     assert "llm_ttft_ms: 500.000 ms" in output
     assert "stt_ms: unknown" in output
+
+
+def test_diagnosis_reports_evidence_without_inventing_a_cause():
+    findings = diagnose_session(analyze_session(make_session()))
+
+    assert [finding.code for finding in findings] == ["high_unattributed_time"]
+    assert findings[0].evidence == {"ttfab_ms": 1000.0, "unattributed_ms": 300.0}
+
+
+def test_cli_diagnose_returns_json(tmp_path, capsys):
+    path = tmp_path / "session.json"
+    path.write_text(json.dumps(make_session().to_dict()), encoding="utf-8")
+
+    assert main(["diagnose", str(path)]) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output[0]["code"] == "high_unattributed_time"
 
 
 def test_provider_adapter_protocol_accepts_read_only_adapter():

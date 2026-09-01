@@ -1,5 +1,6 @@
 from voxracer.adapters.elevenlabs import ElevenLabsAdapter, map_otlp_to_session, merge_transcript_metrics
 from voxracer.adapters.protocol import CallId, ProviderAdapter
+from voxracer.adapters.vapi import map_call_to_session
 
 
 def otlp_response():
@@ -106,3 +107,25 @@ def test_transcript_count_mismatch_does_not_partially_update_session():
     assert session.turns[0].metrics["stt_ms"] is None
     assert session.turns[0].metrics["endpointing_ms"] is None
     assert session.attributes == {"status": 1}
+
+
+def test_vapi_parser_maps_positioned_provider_latencies():
+    session = map_call_to_session({
+        "id": "call-redacted",
+        "startedAt": "2026-08-31T00:00:00Z",
+        "endedAt": "2026-08-31T00:00:05Z",
+        "status": "ended",
+        "messages": [{"role": "assistant", "secondsFromStart": 1.0, "duration": 2.0}],
+        "artifact": {"performanceMetrics": {"turnLatencies": [{
+            "modelLatency": 0.4,
+            "voiceLatency": 0.2,
+            "transcriberLatency": 0.1,
+            "endpointingLatency": 0.3,
+        }]}},
+    })
+
+    turn = session.turns[0]
+    assert turn.start_ns == 1_000_000_000
+    assert turn.metrics["llm_ttft_ms"] == 400.0
+    assert turn.metrics["endpointing_ms"] == 300.0
+    assert turn.metrics["ttfab_ms"] is None
