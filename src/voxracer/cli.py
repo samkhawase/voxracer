@@ -12,7 +12,7 @@ from . import __version__
 from .adapters.elevenlabs import ElevenLabsAdapter
 from .adapters.protocol import AdapterError
 from .analysis import analyze_session
-from .model import Session
+from .model import METRIC_KEYS, Session
 from .schema import validate_session
 
 
@@ -27,6 +27,8 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("session", type=Path)
     analyze = subparsers.add_parser("analyze", help="analyze a session JSON file")
     analyze.add_argument("session", type=Path)
+    report = subparsers.add_parser("report", help="print a human-readable session report")
+    report.add_argument("session", type=Path)
     latest = subparsers.add_parser("latest", help="fetch and analyze the latest provider call")
     latest.add_argument("--provider", choices=("elevenlabs",), default="elevenlabs")
     latest.add_argument(
@@ -48,10 +50,21 @@ def _load(path: Path) -> Session:
     return Session.from_dict(data)
 
 
+def _report(session: Session) -> str:
+    lines = [f"session: {session.session_id}", f"provider: {session.provider or 'unknown'}"]
+    for turn in session.turns:
+        lines.append(f"turn: {turn.turn_id}")
+        for key in METRIC_KEYS:
+            value = turn.metrics[key]
+            display = "unknown" if value is None else f"{value:.3f} ms"
+            lines.append(f"  {key}: {display}")
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
-        if args.command in ("validate", "analyze"):
+        if args.command in ("validate", "analyze", "report"):
             session = _load(args.session)
         else:
             credential = os.environ.get(args.api_key_env)
@@ -65,6 +78,8 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "validate":
             print(f"valid session: {session.session_id}")
+        elif args.command == "report":
+            print(_report(analyze_session(session)))
         else:
             print(json.dumps(analyze_session(session).to_dict(), indent=2))
         return 0

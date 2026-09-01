@@ -31,7 +31,7 @@ position.
 
 ## 3. Useful alpha
 
-Status: next.
+Status: in progress.
 
 - Add a simple command for the latest call.
 - Show measured, unknown, and not-applicable values.

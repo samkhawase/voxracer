@@ -104,6 +104,16 @@ def test_cli_latest_fetches_and_analyzes_newest_call(monkeypatch, capsys):
     assert output["turns"][0]["metrics"]["ttfab_ms"] == 1000.0
 
 
+def test_cli_report_shows_measured_and_unknown_values(tmp_path, capsys):
+    path = tmp_path / "session.json"
+    path.write_text(json.dumps(make_session().to_dict()), encoding="utf-8")
+
+    assert main(["report", str(path)]) == 0
+    output = capsys.readouterr().out
+    assert "llm_ttft_ms: 500.000 ms" in output
+    assert "stt_ms: unknown" in output
+
+
 def test_provider_adapter_protocol_accepts_read_only_adapter():
     class FakeAdapter:
         name = "fake"

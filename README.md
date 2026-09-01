@@ -56,6 +56,19 @@ The command returns canonical JSON. Unknown values remain `null`. Provider
 records can change after a call, and provider timing does not replace audio
 measurement.
 
+For a short terminal report from a local session file, run:
+
+```bash
+voxracer report session.json
+```
+
+The report marks missing measurements as `unknown`. The current model does not
+use a separate not-applicable value.
+
+The provider adapter reads call identifiers, OTLP timing, and transcript timing
+only. It does not provide handset, carrier, or playback measurements. These
+values remain unknown until another measurement source is available.
+
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE).
