@@ -65,13 +65,66 @@ def _load(path: Path) -> Session:
 
 
 def _report(session: Session) -> str:
-    lines = [f"session: {session.session_id}", f"provider: {session.provider or 'unknown'}"]
+    def duration(value: float | None) -> str:
+        if value is None:
+            return "unknown"
+        return f"{value:.0f} ms" if value < 1000 else f"{value / 1000:.2f} s"
+
+    def percentile(values: list[float], fraction: float) -> float:
+        values = sorted(values)
+        return values[min(len(values) - 1, int((len(values) - 1) * fraction))]
+
+    def bar(fraction: float, width: int) -> str:
+        filled = max(0, min(width, round(fraction * width)))
+        return "█" * filled
+
+    measured = [turn.metrics["ttfab_ms"] for turn in session.turns if turn.metrics["ttfab_ms"] is not None]
+    lines = [f"Session {session.session_id} · source={session.provider or 'unknown'} · {len(session.turns)} turns"]
+    first_audio = session.attributes.get("time_to_first_audio_ms")
+    if isinstance(first_audio, (int, float)):
+        lines.append(f"Time to first audio: {first_audio:.0f} ms (caller connected → agent audible)")
+    if measured:
+        lines.append(
+            f"Response time  p50 {duration(percentile(measured, 0.50))} · "
+            f"p95 {duration(percentile(measured, 0.95))} · "
+            f"slowest {duration(max(measured))}   ({len(measured)} of {len(session.turns)} turns measured)"
+        )
+    else:
+        lines.append("Response time  unavailable (no measured caller-perceived turn time)")
+    if len(measured) < 5 and measured:
+        lines.append(f"  (p95 needs 5 measured turns to mean anything — this call has {len(measured)})")
+
+    ranked = sorted(
+        session.turns,
+        key=lambda turn: (turn.metrics["ttfab_ms"] is None, -(turn.metrics["ttfab_ms"] or 0)),
+    )
+    if len(session.turns) > 1:
+        lines.append("\nTurns by response time")
+        width = max(len(turn.turn_id) for turn in session.turns)
+        slowest = max(measured, default=0.0)
+        for turn in ranked:
+            value = turn.metrics["ttfab_ms"]
+            drawn = "·" if value is None or slowest == 0 else bar(value / slowest, 20)
+            lines.append(f"  {turn.turn_id:<{width}}  {drawn:<20}  {duration(value)}")
+
+    labels = (
+        ("endpointing_ms", "endpointing"), ("stt_ms", "STT"),
+        ("llm_ttft_ms", "LLM"), ("tool_ms", "tool"),
+        ("tts_ttfa_ms", "TTS"), ("playback_ms", "playback"),
+        ("unattributed_ms", "unattributed"),
+    )
     for turn in session.turns:
-        lines.append(f"turn: {turn.turn_id}")
-        for key in METRIC_KEYS:
+        response = turn.metrics["ttfab_ms"]
+        lines.append(f"\n{turn.turn_id}")
+        lines.append(f"  {'response time':<14} {duration(response)}")
+        for key, label in labels:
             value = turn.metrics[key]
-            display = "unknown" if value is None else f"{value:.3f} ms"
-            lines.append(f"  {key}: {display}")
+            if value is None:
+                display = "unknown"
+            else:
+                share = f"  {value / response:.0%}" if response and response > 0 else ""
+                display = f"{value:.0f} ms{share}  {bar(value / response, 16) if response and response > 0 else ''}"
+            lines.append(f"  {label:<14} {display}".rstrip())
     findings = diagnose_session(session)
     if findings:
         lines.append("findings:")

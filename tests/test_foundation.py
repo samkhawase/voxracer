@@ -101,7 +101,7 @@ def test_cli_fetches_explicit_call(monkeypatch, capsys):
     monkeypatch.setattr("voxracer.cli.VapiAdapter", FakeAdapter)
 
     assert main(["fetch", "--provider", "vapi", "--call", "call-explicit"]) == 0
-    assert "session: session-1" in capsys.readouterr().out
+    assert "Session session-1" in capsys.readouterr().out
 
 
 def test_cli_fetch_can_return_json(monkeypatch, capsys):
@@ -143,8 +143,8 @@ def test_cli_report_shows_measured_and_unknown_values(tmp_path, capsys):
 
     assert main(["report", str(path)]) == 0
     output = capsys.readouterr().out
-    assert "llm_ttft_ms: 500.000 ms" in output
-    assert "stt_ms: unknown" in output
+    assert "LLM" in output and "500 ms" in output
+    assert "STT" in output and "unknown" in output
 
 
 def test_diagnosis_reports_evidence_without_inventing_a_cause():
