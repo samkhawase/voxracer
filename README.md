@@ -28,6 +28,8 @@ value is not measured. It does not mean zero.
 The ElevenLabs adapter reads provider transcript timing for speech-to-text and
 endpointing. It keeps provider-reported time to first audio in a separate turn
 attribute. It does not treat provider timing as caller-perceived audio timing.
+When caller timing is unavailable, the terminal report can display this value
+as provider response time. JSON keeps `ttfab_ms` as `null`.
 
 ## Development
 

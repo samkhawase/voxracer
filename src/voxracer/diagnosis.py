@@ -31,7 +31,8 @@ def diagnose_session(session: Session) -> list[Finding]:
     findings: list[Finding] = []
     for turn in session.turns:
         ttfab = turn.metrics["ttfab_ms"]
-        if ttfab is None:
+        provider_ttfab = turn.attributes.get("provider_ttfab_ms")
+        if ttfab is None and provider_ttfab is None:
             findings.append(Finding(
                 code="ttfab_unknown",
                 turn_id=turn.turn_id,

@@ -159,6 +159,21 @@ def test_cli_report_shows_measured_and_unknown_values(tmp_path, capsys):
     assert "STT" in output and "unknown" in output
 
 
+def test_cli_report_uses_labeled_provider_timing_fallback(tmp_path, capsys):
+    session = make_session()
+    session.turns[0].spans = []
+    session.turns[0].metrics["ttfab_ms"] = None
+    session.turns[0].attributes["provider_ttfab_ms"] = 700.0
+    path = tmp_path / "session.json"
+    path.write_text(json.dumps(session.to_dict()), encoding="utf-8")
+
+    assert main(["report", str(path)]) == 0
+    output = capsys.readouterr().out
+    assert "Provider response time" in output
+    assert "provider silence → provider first audio" in output
+    assert "response time  700 ms" in output
+
+
 def test_cli_report_aligns_metric_bars(tmp_path, capsys):
     path = tmp_path / "session.json"
     path.write_text(json.dumps(make_session().to_dict()), encoding="utf-8")
