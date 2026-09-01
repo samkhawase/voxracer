@@ -159,6 +159,16 @@ def test_cli_report_shows_measured_and_unknown_values(tmp_path, capsys):
     assert "STT" in output and "unknown" in output
 
 
+def test_cli_report_aligns_metric_bars(tmp_path, capsys):
+    path = tmp_path / "session.json"
+    path.write_text(json.dumps(make_session().to_dict()), encoding="utf-8")
+
+    assert main(["report", str(path)]) == 0
+    rows = [line for line in capsys.readouterr().out.splitlines() if " ms" in line and "  " in line]
+    bar_starts = [line.index("█") for line in rows if "█" in line]
+    assert len(set(bar_starts)) == 1
+
+
 def test_diagnosis_reports_evidence_without_inventing_a_cause():
     findings = diagnose_session(analyze_session(make_session()))
 

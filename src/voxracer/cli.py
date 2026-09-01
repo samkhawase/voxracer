@@ -120,11 +120,15 @@ def _report(session: Session) -> str:
         for key, label in labels:
             value = turn.metrics[key]
             if value is None:
-                display = "unknown"
+                value_text = "unknown"
+                share_text = ""
+                bar_text = ""
             else:
                 share = f"  {value / response:.0%}" if response and response > 0 else ""
-                display = f"{value:.0f} ms{share}  {bar(value / response, 16) if response and response > 0 else ''}"
-            lines.append(f"  {label:<14} {display}".rstrip())
+                value_text = f"{value:.0f} ms"
+                share_text = share.strip()
+                bar_text = bar(value / response, 16) if response and response > 0 else ""
+            lines.append(f"  {label:<14} {value_text:>10} {share_text:>5}  {bar_text:<16}".rstrip())
     findings = diagnose_session(session)
     if findings:
         lines.append("findings:")
