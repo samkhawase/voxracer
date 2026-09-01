@@ -17,5 +17,6 @@ class VapiAdapter:
         return [CallId(value) for value in VapiClient(credential).list_call_ids(limit=limit)]
 
     def fetch_session(self, credential: str, call_id: CallId) -> Session:
-        raw = VapiClient(credential).fetch_call(str(call_id))
-        return map_call_to_session(raw)
+        client = VapiClient(credential)
+        raw = client.fetch_call(str(call_id))
+        return map_call_to_session(raw, client.fetch_event_log(raw))

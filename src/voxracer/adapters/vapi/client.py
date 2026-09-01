@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, cast
 
 from ..protocol import AuthenticationError, MalformedResponseError, ProviderResponseError
 
@@ -23,12 +24,18 @@ class VapiClient:
         self._opener = opener
 
     def _get_json(self, path: str) -> Any:
+        try:
+            return json.loads(self._get_bytes(f"{API_BASE}{path}"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise MalformedResponseError("Vapi returned invalid JSON") from exc
+
+    def _get_bytes(self, url: str, *, authenticated: bool = True) -> bytes:
+        headers = {"User-Agent": USER_AGENT}
+        if authenticated:
+            headers["Authorization"] = f"Bearer {self._api_key}"
         request = urllib.request.Request(
-            f"{API_BASE}{path}",
-            headers={
-                "Authorization": f"Bearer {self._api_key}",
-                "User-Agent": USER_AGENT,
-            },
+            url,
+            headers=headers,
         )
         try:
             with self._opener(request, timeout=30) as response:
@@ -41,10 +48,7 @@ class VapiClient:
             raise ProviderResponseError(f"Vapi request failed: {exc}") from None
         if len(payload) > MAX_RESPONSE_BYTES:
             raise ProviderResponseError("Vapi response is too large")
-        try:
-            return json.loads(payload)
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise MalformedResponseError("Vapi returned invalid JSON") from exc
+        return cast(bytes, payload)
 
     def list_call_ids(self, *, limit: int = 30) -> list[str]:
         data = self._get_json(f"/call?limit={limit}")
@@ -58,3 +62,33 @@ class VapiClient:
         if not isinstance(data, dict):
             raise MalformedResponseError("Vapi call response is not an object")
         return data
+
+    def fetch_event_log(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
+        artifact = raw.get("artifact")
+        url = artifact.get("presignedLogUrl") if isinstance(artifact, dict) else None
+        if not isinstance(url, str) or not url:
+            return []
+        try:
+            payload = gzip.decompress(self._get_bytes(url, authenticated=False)).decode("utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            raise MalformedResponseError("Vapi event log is not valid gzip JSONL") from exc
+        events: list[dict[str, Any]] = []
+        for line in payload.splitlines():
+            try:
+                value = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise MalformedResponseError("Vapi event log contains invalid JSON") from exc
+            if not isinstance(value, dict) or not isinstance(value.get("attributes"), dict):
+                continue
+            attributes = value["attributes"]
+            events.append({
+                "time": value.get("time"),
+                "attributes": {
+                    key: attributes[key]
+                    for key in (
+                        "event", "turnId", "spanId", "latency", "duration"
+                    )
+                    if key in attributes
+                },
+            })
+        return events

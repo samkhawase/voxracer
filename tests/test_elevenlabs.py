@@ -118,10 +118,11 @@ def test_vapi_parser_maps_positioned_provider_latencies():
         "status": "ended",
         "messages": [{"role": "assistant", "secondsFromStart": 1.0, "duration": 2.0}],
         "artifact": {"performanceMetrics": {"turnLatencies": [{
-            "modelLatency": 0.4,
-            "voiceLatency": 0.2,
-            "transcriberLatency": 0.1,
-            "endpointingLatency": 0.3,
+            "modelLatency": 400,
+            "voiceLatency": 200,
+            "transcriberLatency": 100,
+            "endpointingLatency": 300,
+            "turnLatency": 1000,
         }]}},
     })
 
@@ -152,3 +153,33 @@ def test_vapi_client_sends_explicit_user_agent():
     VapiClient("redacted-key", opener=opener).list_call_ids(limit=1)
 
     assert requests[0].get_header("User-agent") == USER_AGENT
+
+
+def test_vapi_event_log_builds_turns_from_speech_boundary():
+    raw = {
+        "id": "call-redacted",
+        "startedAt": "2026-08-31T00:00:00Z",
+        "artifact": {"performanceMetrics": {"turnLatencies": [{
+            "turnLatency": 1000,
+            "modelLatency": 200,
+            "voiceLatency": 100,
+            "transcriberLatency": 100,
+            "endpointingLatency": 300,
+        }]}},
+    }
+    events = [
+        {"time": 1200, "attributes": {"event": "pipeline.turnStarted", "turnId": "1"}},
+        {"time": 1300, "attributes": {"event": "assistant.model.requestStarted", "turnId": "1", "spanId": "model-1"}},
+        {"time": 1500, "attributes": {"event": "assistant.model.firstTokenReceived", "turnId": "1", "spanId": "model-1", "latency": 200}},
+        {"time": 1800, "attributes": {"event": "assistant.voice.firstAudioReceived", "turnId": "1", "latency": 100}},
+        {"time": 2000, "attributes": {"event": "pipeline.botSpeechStarted", "turnId": "1"}},
+    ]
+
+    session = map_call_to_session(raw, events)
+
+    assert len(session.turns) == 1
+    turn = session.turns[0]
+    assert turn.start_ns == 1_000_000_000
+    assert turn.metrics["stt_ms"] == 100.0
+    assert turn.metrics["llm_ttft_ms"] == 200.0
+    assert turn.metrics["ttfab_ms"] == 1000.0
