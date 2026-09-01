@@ -12,6 +12,7 @@ from ..protocol import AuthenticationError, MalformedResponseError, ProviderResp
 
 API_BASE = "https://api.vapi.ai"
 MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+USER_AGENT = "voxracer/0.1.0a1"
 
 
 class VapiClient:
@@ -24,7 +25,10 @@ class VapiClient:
     def _get_json(self, path: str) -> Any:
         request = urllib.request.Request(
             f"{API_BASE}{path}",
-            headers={"Authorization": f"Bearer {self._api_key}"},
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "User-Agent": USER_AGENT,
+            },
         )
         try:
             with self._opener(request, timeout=30) as response:

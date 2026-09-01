@@ -1,6 +1,7 @@
 from voxracer.adapters.elevenlabs import ElevenLabsAdapter, map_otlp_to_session, merge_transcript_metrics
 from voxracer.adapters.protocol import CallId, ProviderAdapter
 from voxracer.adapters.vapi import map_call_to_session
+from voxracer.adapters.vapi.client import USER_AGENT, VapiClient
 
 
 def otlp_response():
@@ -129,3 +130,25 @@ def test_vapi_parser_maps_positioned_provider_latencies():
     assert turn.metrics["llm_ttft_ms"] == 400.0
     assert turn.metrics["endpointing_ms"] == 300.0
     assert turn.metrics["ttfab_ms"] is None
+
+
+def test_vapi_client_sends_explicit_user_agent():
+    requests = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self, limit):
+            return b"[]"
+
+    def opener(request, timeout):
+        requests.append(request)
+        return Response()
+
+    VapiClient("redacted-key", opener=opener).list_call_ids(limit=1)
+
+    assert requests[0].get_header("User-agent") == USER_AGENT
