@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v9
+        with:
+          version: "latest"
+      - run: uv python install ${{ matrix.python-version }}
+      - run: uv sync --locked
+        env:
+          UV_PYTHON: ${{ matrix.python-version }}
+      - run: uv run pytest -q
+      - run: uv run mypy src
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v9
+        with:
+          version: "latest"
+      - run: uv python install 3.12
+      - run: uv build
+      - run: uv venv .package-test --python 3.12
+      - run: uv pip install dist/*.whl --python .package-test/bin/python
+      - run: .package-test/bin/voxracer --help

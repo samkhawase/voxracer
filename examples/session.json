@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1",
+  "session_id": "example-session",
+  "provider": "example",
+  "started_at": "2026-08-31T00:00:00Z",
+  "ended_at": null,
+  "turns": [
+    {
+      "turn_id": "turn-1",
+      "start_ns": 0,
+      "end_ns": 1000000000,
+      "spans": [
+        {
+          "span_id": "llm-1",
+          "type": "llm",
+          "start_ns": 100000000,
+          "end_ns": 600000000,
+          "parent_span_id": null,
+          "critical_path": true,
+          "clock": null,
+          "precision_ns": null,
+          "attributes": {}
+        }
+      ],
+      "metrics": {
+        "ttfab_ms": null,
+        "endpointing_ms": null,
+        "stt_ms": null,
+        "llm_ttft_ms": null,
+        "tool_ms": null,
+        "tts_ttfa_ms": null,
+        "playback_ms": null,
+        "unattributed_ms": null
+      },
+      "precision_ns": null,
+      "measurement_source": null,
+      "measurement_scope": null,
+      "measurement_quality": null
+    }
+  ],
+  "attributes": {}
+}
