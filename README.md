@@ -1,5 +1,7 @@
 # VoxRacer
 
+![VoxRacer logo](assets/voxracer-logo.png)
+
 VoxRacer is a local profiler for voice-agent response time.
 
 This is an early public development project. The first release will show where
