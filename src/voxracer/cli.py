@@ -142,7 +142,11 @@ def _key_env(provider: str, override: str | None) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    commands = {"validate", "analyze", "report", "diagnose", "latest", "fetch"}
+    if not any(item in commands for item in raw_argv) and {"--provider", "--call"}.issubset(raw_argv):
+        raw_argv.insert(0, "fetch")
+    args = _parser().parse_args(raw_argv)
     try:
         if args.command in ("validate", "analyze", "report", "diagnose"):
             session = _load(args.session)

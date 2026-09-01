@@ -116,6 +116,18 @@ def test_cli_fetch_can_return_json(monkeypatch, capsys):
     assert json.loads(capsys.readouterr().out)["session_id"] == "session-1"
 
 
+def test_cli_supports_legacy_provider_call_shape(monkeypatch, capsys):
+    class FakeAdapter:
+        def fetch_session(self, credential, call_id):
+            return make_session()
+
+    monkeypatch.setenv("VAPI_API_KEY", "redacted-key")
+    monkeypatch.setattr("voxracer.cli.VapiAdapter", FakeAdapter)
+
+    assert main(["--provider", "vapi", "--call", "call-explicit"]) == 0
+    assert "Session session-1" in capsys.readouterr().out
+
+
 def test_cli_latest_fetches_and_analyzes_newest_call(monkeypatch, capsys):
     class FakeLatestAdapter:
         def list_call_ids(self, credential, *, limit=30):
